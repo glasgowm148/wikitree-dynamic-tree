@@ -1,0 +1,219 @@
+.bcfc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.bcfc-action-menu {
+  position: relative;
+}
+.bcfc-action-menu > summary {
+  padding: 10px 16px;
+  border: 1px solid #dbe2eb;
+  border-radius: 9px;
+  color: #4c5b70;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.bcfc-action-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.bcfc-action-menu[open] > summary,
+.bcfc-action-menu > summary:hover {
+  background: #f3f6fa;
+}
+.bcfc-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(250px, calc(100vw - 48px));
+  padding: 8px;
+  border: 1px solid #dce3ed;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 40px #26364a26;
+}
+.bcfc-menu-panel label,
+.bcfc-menu-panel button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #233247;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.bcfc-menu-panel label:hover,
+.bcfc-menu-panel button:hover {
+  background: #f3f6fa;
+}
+.bcfc-menu-panel button:disabled,
+.bcfc-menu-panel label:has(input:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+.bcfc-menu-panel p {
+  margin: 8px 10px;
+  color: #738094;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.bcfc-chart-area {
+  position: relative;
+  overflow: hidden;
+}
+.bcfc-app #bcfc-svg {
+  touch-action: none;
+  user-select: none;
+}
+.bcfc-is-zoomed #bcfc-svg {
+  cursor: grab;
+}
+.bcfc-is-zoomed #bcfc-svg:active {
+  cursor: grabbing;
+}
+.bcfc-chart-navigation {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.bcfc-chart-area:hover .bcfc-chart-navigation,
+.bcfc-chart-area:focus-within .bcfc-chart-navigation,
+.bcfc-chart-navigation:focus-within,
+.bcfc-is-zoomed .bcfc-chart-navigation {
+  opacity: 1;
+}
+.bcfc-chart-navigation button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1px solid #dbe2eb;
+  border-radius: 6px;
+  background: #fffffff0;
+  color: #4c5b70;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bcfc-comparison {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e8edf3;
+}
+.bcfc-review {
+  margin-top: 18px;
+  padding: 24px;
+  border: 1px solid #e0e6ed;
+  border-radius: 18px;
+  background: #fff;
+}
+.bcfc-comparison h3,
+.bcfc-review h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.bcfc-comparison p,
+.bcfc-review p {
+  margin: 8px 0 12px;
+  color: #738094;
+  font-size: 12px;
+}
+.bcfc-table-wrap {
+  overflow: auto;
+  max-height: 340px;
+}
+.bcfc-app table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.bcfc-app th,
+.bcfc-app td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #e8edf3;
+  text-align: left;
+  vertical-align: top;
+}
+.bcfc-app thead th {
+  position: sticky;
+  top: 0;
+  background: #f7f9fc;
+  color: #4c5b70;
+  white-space: nowrap;
+}
+.bcfc-app tbody th {
+  font-weight: 500;
+}
+.bcfc-comparison td {
+  font-variant-numeric: tabular-nums;
+}
+.bcfc-comparison .bcfc-mix-dot {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.bcfc-review a {
+  color: #0065bd;
+}
+.bcfc-exit-present {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+  padding: 8px 12px;
+  border: 1px solid #dbe2eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #4c5b70;
+  font: inherit;
+  font-size: 12px;
+  opacity: 0;
+  cursor: pointer;
+}
+.bcfc-exit-present:hover,
+.bcfc-exit-present:focus-visible {
+  opacity: 1;
+}
+body.bcfc-presenting .bcfc-header-actions,
+body.bcfc-presenting .bcfc-chart-navigation,
+body.bcfc-presenting .bcfc-review,
+body.bcfc-presenting .bcfc-comparison {
+  display: none;
+}
+@container (max-width:720px) {
+  .bcfc-header-actions {
+    width: 100%;
+  }
+  .bcfc-menu-panel {
+    right: auto;
+    left: 0;
+  }
+}
+@media (hover: none) {
+  .bcfc-chart-navigation,
+  .bcfc-exit-present {
+    opacity: 1;
+  }
+}
+@media print {
+  .bcfc-header-actions,
+  .bcfc-chart-navigation,
+  .bcfc-exit-present,
+  .bcfc-review {
+    display: none;
+  }
+}

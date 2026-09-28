@@ -35,8 +35,8 @@ test("historic realms and additional countries have their own colours", () => {
     assert.equal(new Set(names.map(countryColour)).size, names.length);
 });
 test("labels adapt to bright and dark fills", () => {
-    assert.equal(countryTextColour("Unknown"), "#171717");
-    assert.equal(countryTextColour("Germany"), "#171717");
+    assert.equal(countryTextColour("Unknown"), "#000000");
+    assert.equal(countryTextColour("Germany"), "#000000");
     assert.equal(countryTextColour("Scotland"), "#ffffff");
     assert.equal(countryTextColour("France"), "#ffffff");
 });

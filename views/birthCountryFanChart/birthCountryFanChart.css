@@ -1,3 +1,5 @@
+@import url("./chartTools.css");
+
 #view-container.bcfc-view-host {
   min-height: 0;
   overflow: visible;
@@ -98,28 +100,6 @@
   margin: 8px 0 0;
   color: #758195;
   font-size: 12px;
-}
-.bcfc-present-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  gap: 7px;
-  padding: 10px 13px;
-  border: 1px solid #dbe2eb;
-  border-radius: 9px;
-  background: #fff;
-  color: #4c5b70;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.bcfc-present-button:hover {
-  background: #f3f6fa;
-}
-.bcfc-present-button:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 .bcfc-panel {
   padding: 0;
@@ -486,13 +466,6 @@ body.bcfc-presenting .bcfc-many-countries .bcfc-country-legend {
 body.bcfc-presenting .bcfc-many-countries .bcfc-ancestry {
   grid-row: 4;
 }
-body.bcfc-presenting .bcfc-present-button {
-  opacity: 0;
-}
-body.bcfc-presenting .bcfc-present-button:hover,
-body.bcfc-presenting .bcfc-present-button:focus-visible {
-  opacity: 1;
-}
 body.bcfc-presenting .bcfc-wedge:hover {
   filter: none;
 }
@@ -601,7 +574,6 @@ body.bcfc-presenting .bcfc-wedge:hover {
 }
 @media print {
   .bcfc-controls,
-  .bcfc-present-button,
   .bcfc-info,
   .bcfc-tooltip {
     display: none !important;

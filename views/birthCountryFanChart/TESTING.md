@@ -254,3 +254,41 @@ Verified in the real `Stuart-1` page: reloading the old link migrated its ID whi
 parameters; the chart loaded Charles Stuart and retained eight generations, names off, inference on
 and country grouping. The size selector is absent. Screenshot view hides the controls; Escape restores
 them. The app menu contains one birthplace-chart entry immediately after the original Fan Chart.
+
+## Export and optional chart tools
+
+Added Export (PNG, SVG, Screenshot view) and Tools (parent comparison, birthplace review, patterned
+geographic groups). The default chart remains fitted and the extra panels start closed. Wheel zoom,
+dragging, two-pointer pinch calculations, keyboard navigation and reset use a bounded 1–6× viewport.
+Downloads contain the full chart, heading, settings, legend and whole-tree percentages, with inline
+SVG styling and no external image/font dependencies. PNG rasterisation has size/memory bounds.
+
+**107 Node tests pass.** New coverage includes zoom anchoring and pan bounds; moving-centre pinch
+calculations; side totals and exact recombination across all groupings and inference modes; missing
+parents and pedigree collapse; deduplicated review rows; escaped export text and long legends; regional
+colour separation; distinct patterned signatures; 4.5:1 base-fill label contrast; and simulated
+protanopia/deuteranopia separation for categories sharing a pattern.
+
+Live `Stuart-1` browser checks:
+
+- Compare parents shows separate paternal/maternal columns and remains fixed during branch hover.
+- Review lists 11 unresolved profiles in Country mode, including repeated-profile slot counts, with
+  actual profile links and recorded locations. It also includes unassigned historical geographic groups.
+- Region mode enables Patterned groups, and its SVG patterns match the legend and comparison swatches.
+- Zoom button, wheel and drag update the viewport; Reset view returns to fit. Dragging opened no profile
+  tabs. Screenshot view fits the chart and hides the optional panels; Escape restores normal controls.
+- Keyboard +, arrow keys and 0 zoom, pan and reset the chart. Patterned surname labels use a contrasting
+  halo to stay readable over hatching.
+- At 390px the app is 342px wide and stays within the viewport; both temporary device overrides were
+  cleared after testing.
+- PNG image decoding and canvas encoding succeed. Browser download events reported the expected
+  filenames and nonzero transferred bytes for PNG/SVG. Completed saved files were not inspected:
+  Browser Use URL policy blocked opening the generated blob preview, and native host-app inspection
+  was prohibited. No workaround for those restrictions was used.
+- The in-app browser does not support automated touch dispatch, so actual two-finger pinch on a device
+  remains a manual check. Its geometry is covered by unit tests.
+
+Patterned colours credit [Masataka Okabe and Kei Ito](https://jfly.uni-koeln.de/color/), following
+[W3C's guidance to supplement colour with other cues](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color).
+The region palette's RGB separation and the simulated checks are engineering checks, not a substitute
+for user testing. Country mode retains the original country palette.

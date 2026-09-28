@@ -8,8 +8,10 @@ import {
     emptyMix,
     COUNTRIES,
 } from "./countryModel.js";
-import { countryColour, countryTextColour } from "./countryColours.js";
+import { countryTextColour, countryStyle, patternMarkup, swatchStyle } from "./countryColours.js";
 import { GROUPINGS } from "./geography.js";
+import { FIT_VIEW, constrainView, zoomView, pinchView, parentComparison, reviewBirthplaces } from "./chartTools.js";
+import { createChartExport, exportPng, downloadBlob } from "./chartExport.js";
 
 window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
     static APP_ID = "BirthCountryFanChart";
@@ -21,7 +23,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             description:
                 "Visualises ancestral birth countries and genealogical slot-weighted ancestral birth-country share, with optional inference for missing locations.",
             docs: "views/birthCountryFanChart/README.md",
-            params: ["generations", "infer", "names", "group"],
+            params: ["generations", "infer", "names", "group", "patterns"],
         };
     }
 
@@ -36,6 +38,13 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         this.visibleCountries = new Set(this.countries);
         this.settings = this._loadSettings(params);
         this.isPresenting = false;
+        this.isComparing = false;
+        this.isReviewing = false;
+        this.isExporting = false;
+        this.viewState = { ...FIT_VIEW };
+        this.pointers = new Map();
+        this.isDragging = false;
+        this.suppressClicksUntil = 0;
         this.peopleById = {};
         this.slots = new Map();
         this.overallMix = this._emptyMix();
@@ -103,7 +112,8 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             : Object.hasOwn(GROUPINGS, stored.group)
               ? stored.group
               : "country";
-        return { generations, infer, names, group: grouping };
+        const patterns = params.patterns !== undefined ? params.patterns === "1" : Boolean(stored.patterns);
+        return { generations, infer, names, group: grouping, patterns };
     }
 
     _saveSettings() {
@@ -122,6 +132,8 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             hash.set("infer", this.settings.infer ? "1" : "0");
             hash.set("names", this.settings.names);
             hash.set("group", this.settings.group);
+            if (this.settings.patterns) hash.set("patterns", "1");
+            else hash.delete("patterns");
             history.replaceState("", "", `${window.location.pathname}${window.location.search}#${hash.toString()}`);
         } catch (e) {
             // Sharing settings in the URL is convenient but not required for rendering.
@@ -145,16 +157,34 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
                                         Additional programming by: <a href="https://www.wikitree.com/wiki/Duke-5773" target="_blank" rel="noopener noreferrer">Jonathan Duke</a><br>
                                         Assistance and code borrowed from: Rob Pavey, Kay Knight, Riel Smit &amp; Ian Beacall.</p>
                                         <p>This birthplace view also uses the shared WikiTree Tree Apps framework, location utilities and country catalogue. Thanks to their contributors.</p>
+                                        <p>The patterned geographic palette uses colours by <a href="https://jfly.uni-koeln.de/color/" target="_blank" rel="noopener noreferrer">Masataka Okabe and Kei Ito</a>.</p>
                                     </div>
                                 </details>
                             </div>
                             <h1><span id="bcfc-profile-title">Your family tree</span> <span id="bcfc-profile-years" class="bcfc-profile-years" hidden></span></h1>
                             <p id="bcfc-profile-meta" class="bcfc-profile-meta"></p>
                         </div>
-                        <button id="bcfc-present" class="bcfc-present-button" type="button" aria-pressed="false" title="Hide navigation and controls for a screenshot. Press Escape to return.">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 5h8l2 3h3v12H3V8h3z"/><circle cx="12" cy="13" r="4"/></svg>
-                            <span>Screenshot view</span>
-                        </button>
+                        <div class="bcfc-header-actions">
+                            <details class="bcfc-action-menu" id="bcfc-tools-menu">
+                                <summary>Tools</summary>
+                                <div class="bcfc-menu-panel">
+                                    <label><input id="bcfc-compare" type="checkbox"> Compare parents</label>
+                                    <label><input id="bcfc-review-toggle" type="checkbox"> Review birthplaces</label>
+                                    <label><input id="bcfc-pattern-toggle" type="checkbox"> Patterned groups</label>
+                                    <p>Patterns apply to regions and continents.</p>
+                                    <p id="bcfc-navigation-help">Wheel or pinch to zoom; drag to pan. With the chart focused, use +/− to zoom, arrow keys to pan and 0 to reset.</p>
+                                </div>
+                            </details>
+                            <details class="bcfc-action-menu" id="bcfc-export-menu">
+                                <summary>Export</summary>
+                                <div class="bcfc-menu-panel">
+                                    <button type="button" data-export="png">Download PNG</button>
+                                    <button type="button" data-export="svg">Download SVG</button>
+                                    <button id="bcfc-present" type="button" aria-pressed="false"><span>Screenshot view</span></button>
+                                    <p id="bcfc-export-status" role="status" aria-live="polite" hidden></p>
+                                </div>
+                            </details>
+                        </div>
                     </header>
                     <section class="bcfc-panel bcfc-controls" aria-label="Chart options">
                         <div class="bcfc-options">
@@ -186,9 +216,15 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
                         <div id="bcfc-status" class="bcfc-status" role="status" aria-live="polite"></div>
                     </section>
                     <div class="bcfc-chart-area">
-                        <svg id="bcfc-svg" viewBox="0 0 1600 870" role="group" aria-label="Ancestor fan chart coloured by birth country">
-                            <g id="bcfc-chart"></g>
+                        <svg id="bcfc-svg" viewBox="0 0 1600 870" role="group" tabindex="0" aria-describedby="bcfc-navigation-help" aria-label="Ancestor fan chart coloured by birth country">
+                            <defs id="bcfc-patterns"></defs>
+                            <g id="bcfc-viewport"><g id="bcfc-chart"></g></g>
                         </svg>
+                        <div class="bcfc-chart-navigation" aria-label="Chart navigation">
+                            <button type="button" data-zoom="1.3" aria-label="Zoom in">+</button>
+                            <button type="button" data-zoom="0.769230769" aria-label="Zoom out">−</button>
+                            <button type="button" id="bcfc-reset-view" hidden>Reset view</button>
+                        </div>
                     </div>
                     <aside class="bcfc-panel bcfc-country-legend" aria-label="Birth country colour key">
                         <div class="bcfc-section-heading">
@@ -224,8 +260,11 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
                         </div>
                         <div class="bcfc-mix-bar" aria-hidden="true"></div>
                         <div class="bcfc-mix-rows"></div>
+                        <div id="bcfc-comparison" class="bcfc-comparison" hidden></div>
                     </section>
                 </div>
+                <section id="bcfc-review" class="bcfc-review" aria-label="Birthplace review" hidden></section>
+                <button id="bcfc-exit-present" class="bcfc-exit-present" type="button" hidden>Exit screenshot view</button>
                 <div id="bcfc-tooltip" class="bcfc-tooltip" role="tooltip" aria-hidden="true"></div>
             </section>`;
     }
@@ -237,6 +276,27 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         const infer = find("#bcfc-infer");
         const names = find("#bcfc-names");
         on(find("#bcfc-present"), "click", () => this._setPresentation(!this.isPresenting));
+        on(find("#bcfc-exit-present"), "click", () => this._setPresentation(false));
+        on(find("#bcfc-compare"), "change", (event) => {
+            this.isComparing = event.target.checked;
+            this._renderToolsPanels();
+        });
+        on(find("#bcfc-review-toggle"), "change", (event) => {
+            this.isReviewing = event.target.checked;
+            this._renderToolsPanels();
+        });
+        on(find("#bcfc-pattern-toggle"), "change", (event) => {
+            this.settings.patterns = event.target.checked;
+            this._saveSettings();
+            this._renderCountryPanels();
+            this._renderChart();
+        });
+        find("#bcfc-export-menu")
+            .querySelectorAll("[data-export]")
+            .forEach((button) => {
+                on(button, "click", () => this._exportChart(button.dataset.export));
+            });
+        this._bindNavigation();
         on(find("#bcfc-group"), "change", (event) => {
             this.settings.group = event.target.value;
             this._saveSettings();
@@ -274,7 +334,9 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             if (event.key === "Escape") {
                 this._hideTooltip();
                 this.container.querySelectorAll("details[open]").forEach((details) => {
+                    const hasFocus = details.contains(document.activeElement);
                     details.open = false;
+                    if (hasFocus) details.querySelector("summary").focus();
                 });
             }
         });
@@ -282,7 +344,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             if (event.key === "Escape" && this.isPresenting) this._setPresentation(false);
         });
         on(document, "pointerdown", (event) => {
-            this.container.querySelectorAll(".bcfc-info[open]").forEach((details) => {
+            this.container.querySelectorAll(".bcfc-info[open], .bcfc-action-menu[open]").forEach((details) => {
                 if (!details.contains(event.target)) details.open = false;
             });
         });
@@ -295,18 +357,234 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         this.container.querySelector("#bcfc-infer").checked = this.settings.infer;
         this.container.querySelector("#bcfc-names").value = this.settings.names;
         this.container.querySelector("#bcfc-group").value = this.settings.group;
+        const patternToggle = this.container.querySelector("#bcfc-pattern-toggle");
+        patternToggle.checked = this.settings.patterns;
+        patternToggle.disabled = this.settings.group === "country";
+    }
+
+    _countryStyle(country) {
+        return countryStyle(country, this.settings.group, this.settings.patterns);
+    }
+
+    _countryFill(country) {
+        const style = this._countryStyle(country);
+        return style.pattern ? `url(#${style.id})` : style.colour;
+    }
+
+    _applyView() {
+        if (!this.container) return;
+        const { scale, x, y } = this.viewState;
+        this.container
+            .querySelector("#bcfc-viewport")
+            .setAttribute("transform", `translate(${x} ${y}) scale(${scale})`);
+        this.container.querySelector("#bcfc-reset-view").hidden = scale === 1;
+        this.container.querySelector(".bcfc-chart-area").classList.toggle("bcfc-is-zoomed", scale > 1);
+    }
+
+    _bindNavigation() {
+        const svg = this.container.querySelector("#bcfc-svg");
+        const on = (element, type, handler, options = {}) =>
+            element.addEventListener(type, handler, { ...options, signal: this.events.signal });
+        const point = (event) =>
+            new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse());
+        const zoom = (factor, anchor = { x: 800, y: 435 }) => {
+            if (this.isPresenting || !this.model) return;
+            this.viewState = zoomView(this.viewState, factor, anchor);
+            this._hideTooltip();
+            this._applyView();
+        };
+        this.container.querySelectorAll("[data-zoom]").forEach((button) => {
+            on(button, "click", () => zoom(Number(button.dataset.zoom)));
+        });
+        on(this.container.querySelector("#bcfc-reset-view"), "click", () => {
+            this.viewState = { ...FIT_VIEW };
+            this._applyView();
+        });
+        on(svg, "keydown", (event) => {
+            if (event.target !== svg || this.isPresenting || !this.model) return;
+            const moves = { ArrowLeft: [80, 0], ArrowRight: [-80, 0], ArrowUp: [0, 80], ArrowDown: [0, -80] };
+            if (["+", "=", "-", "0"].includes(event.key)) {
+                event.preventDefault();
+                if (event.key === "0") {
+                    this.viewState = { ...FIT_VIEW };
+                    this._applyView();
+                } else zoom(event.key === "-" ? 1 / 1.3 : 1.3);
+            } else if (moves[event.key] && this.viewState.scale > 1) {
+                event.preventDefault();
+                this.viewState = constrainView({
+                    ...this.viewState,
+                    x: this.viewState.x + moves[event.key][0],
+                    y: this.viewState.y + moves[event.key][1],
+                });
+                this._hideTooltip();
+                this._applyView();
+            }
+        });
+        on(
+            svg,
+            "wheel",
+            (event) => {
+                if (this.isPresenting || !this.model) return;
+                if (this.viewState.scale === 1 && event.deltaY > 0) {
+                    if (event.ctrlKey || event.metaKey) event.preventDefault();
+                    return;
+                }
+                event.preventDefault();
+                zoom(Math.exp(-event.deltaY * (event.deltaMode === 1 ? 16 : 1) * 0.0025), point(event));
+            },
+            { passive: false }
+        );
+        on(svg, "pointerdown", (event) => {
+            if (this.isPresenting || !this.model || event.button !== 0) return;
+            const position = point(event);
+            this.pointers.set(event.pointerId, { position, start: position });
+        });
+        on(svg, "pointermove", (event) => {
+            const previous = this.pointers.get(event.pointerId);
+            if (!previous) return;
+            const oldPoints = [...this.pointers.values()].map((entry) => entry.position);
+            const position = point(event);
+            this.pointers.set(event.pointerId, { ...previous, position });
+            if (this.pointers.size === 2) {
+                const newPoints = [...this.pointers.values()].map((entry) => entry.position);
+                this.viewState = pinchView(this.viewState, oldPoints, newPoints);
+            } else if (
+                this.pointers.size === 1 &&
+                this.viewState.scale > 1 &&
+                Math.hypot(position.x - previous.start.x, position.y - previous.start.y) >= 5
+            ) {
+                this.viewState = constrainView({
+                    ...this.viewState,
+                    x: this.viewState.x + position.x - previous.position.x,
+                    y: this.viewState.y + position.y - previous.position.y,
+                });
+            } else return;
+            this.isDragging = true;
+            this.suppressClicksUntil = performance.now() + 300;
+            svg.setPointerCapture(event.pointerId);
+            event.preventDefault();
+            this._hideTooltip();
+            this._applyView();
+        });
+        const finish = (event) => {
+            this.pointers.delete(event.pointerId);
+            if (svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
+            // A remaining finger starts a new pan after a pinch.
+            this.pointers.forEach((entry) => {
+                entry.start = entry.position;
+            });
+            if (!this.pointers.size) this.isDragging = false;
+        };
+        on(svg, "pointerup", finish);
+        on(svg, "pointercancel", finish);
+        on(svg, "pointerleave", (event) => {
+            if (!svg.hasPointerCapture(event.pointerId)) finish(event);
+        });
+    }
+
+    _renderToolsPanels() {
+        if (!this.container) return;
+        const escape = (value) => this._escapeHtml(value);
+        const comparison = this.container.querySelector("#bcfc-comparison");
+        comparison.hidden = !this.isComparing;
+        if (this.isComparing) {
+            const rows = parentComparison(this.model);
+            const percent = (share) => `${(share * 100).toFixed(share >= 0.1 ? 1 : 2)}%`;
+            comparison.innerHTML = `<h3>Paternal and maternal ancestry</h3><p>Each side totals 100% at the selected depth.</p>
+                <div class="bcfc-table-wrap" tabindex="0" aria-label="Parent comparison table"><table><thead><tr><th scope="col">Birth ${GROUPINGS[this.settings.group].toLowerCase()}</th><th scope="col">Paternal</th><th scope="col">Maternal</th></tr></thead><tbody>${rows
+                    .map(
+                        (row) =>
+                            `<tr><th scope="row"><span class="bcfc-mix-dot" style="${swatchStyle(this._countryStyle(row.country))}"></span>${escape(row.country)}</th><td>${percent(row.paternal)}</td><td>${percent(row.maternal)}</td></tr>`
+                    )
+                    .join("")}</tbody></table></div>`;
+        }
+        const review = this.container.querySelector("#bcfc-review");
+        review.hidden = !this.isReviewing;
+        if (this.isReviewing) {
+            const rows = reviewBirthplaces(this.slots, this.settings.group);
+            review.innerHTML = `<h2>Birthplace review</h2><p>${rows.length ? `${rows.length} ${rows.length === 1 ? "profile needs" : "profiles need"} a closer look.` : this.model ? "All recorded birthplaces matched." : "Load a chart to review its birthplaces."}</p>${
+                rows.length
+                    ? `<div class="bcfc-table-wrap" tabindex="0" aria-label="Recorded birthplaces table"><table><thead><tr><th scope="col">Profile</th><th scope="col">Recorded birthplace</th><th scope="col">Review</th><th scope="col">Slots</th></tr></thead><tbody>${rows
+                          .map(
+                              (row) =>
+                                  `<tr><th scope="row">${row.profile ? `<a href="https://www.wikitree.com/wiki/${encodeURIComponent(row.profile)}" target="_blank" rel="noopener noreferrer">${escape(row.name)}</a>` : escape(row.name)}</th><td>${escape(row.location)}</td><td>${escape(row.reason)}</td><td>${row.occurrences}</td></tr>`
+                          )
+                          .join("")}</tbody></table></div>`
+                    : ""
+            }`;
+        }
+    }
+
+    async _exportChart(format) {
+        if (!this.model || this.isExporting) return;
+        this.isExporting = true;
+        const serial = this.requestSerial;
+        const status = this.container.querySelector("#bcfc-export-status");
+        status.hidden = false;
+        status.textContent = "Preparing image…";
+        const buttons = [...this.container.querySelectorAll("[data-export]")];
+        buttons.forEach((button) => {
+            button.disabled = true;
+        });
+        try {
+            const clone = this.container.querySelector("#bcfc-svg").cloneNode(true);
+            clone.querySelector("#bcfc-viewport").removeAttribute("transform");
+            const years = this.container.querySelector("#bcfc-profile-years");
+            const legend = [...this.container.querySelectorAll("[data-country-toggle]")].map((button) => {
+                const country = button.dataset.countryToggle;
+                const share = (this.overallMix[country] || 0) * 100;
+                return {
+                    label: country,
+                    fill: this._countryFill(country),
+                    percent: `${share.toFixed(share >= 10 ? 1 : 2)}%`,
+                    dimmed: this.hiddenCountries.has(country),
+                };
+            });
+            const image = createChartExport({
+                chartMarkup: clone.innerHTML,
+                title: this.container.querySelector("#bcfc-profile-title").textContent,
+                years: years.hidden ? "" : years.textContent,
+                metadata: `${this.container.querySelector("#bcfc-profile-meta").textContent} · ${this.settings.names === "off" ? "Names off" : this.settings.names === "surname" ? "Surnames" : "Full names"}${this.settings.patterns && this.settings.group !== "country" ? " · Patterned groups" : ""}`,
+                legend,
+                inferred: [...this.slots.values()].some((node) => node.inference),
+            });
+            const blob =
+                format === "png"
+                    ? await exportPng(image)
+                    : new Blob([image.svg], { type: "image/svg+xml;charset=utf-8" });
+            if (!this.container || serial !== this.requestSerial) return;
+            const profile = this._personById(this.rootId)?.Name || "ancestry";
+            const filename = `${profile.replace(/[^\p{L}\p{N}._-]/gu, "-")}-birth-${this.settings.group}-${this.settings.generations}gen.${format}`;
+            downloadBlob(blob, filename);
+            status.textContent = "Download ready.";
+            this.container.querySelector("#bcfc-export-menu").open = false;
+        } catch (error) {
+            if (this.container && serial === this.requestSerial)
+                status.textContent = `Could not export: ${error.message}`;
+        } finally {
+            if (this.container && serial === this.requestSerial) {
+                this.isExporting = false;
+                buttons.forEach((button) => {
+                    button.disabled = false;
+                });
+            }
+        }
     }
 
     async _loadData() {
         const serial = ++this.requestSerial;
+        this.isExporting = false;
         this._hideTooltip();
         this.chartEvents?.abort();
         this.slots = new Map();
         this.model = null;
+        this.viewState = { ...FIT_VIEW };
+        this._applyView();
         this.peopleById = {};
         this.container.querySelector("#bcfc-chart").replaceChildren();
         this.overallMix = this._unitMix("Unknown");
         this._updateMixPanel(this.overallMix, "Whole tree");
+        this._renderToolsPanels();
         this._setLoading(true, `Loading ${this.settings.generations} generations…`);
 
         try {
@@ -350,6 +628,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         this.countries = this.model.countries;
         this.visibleCountries = new Set(this.countries.filter((country) => !this.hiddenCountries.has(country)));
         this._renderCountryPanels();
+        this._syncControls();
         this.overallMix = this.model.overallMix;
         this._updateMixPanel(this.overallMix, "Whole tree");
     }
@@ -372,6 +651,10 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         this.chartEvents = new AbortController();
         this._hideTooltip();
         this._renderHeader();
+        this._renderToolsPanels();
+        this.container.querySelector("#bcfc-patterns").innerHTML = this.countries
+            .map((country) => patternMarkup(this._countryStyle(country)))
+            .join("");
         svgGroup.innerHTML = "";
         this.overallMix = this._computeOverallMix();
         this._updateMixPanel(this.overallMix, "Whole tree");
@@ -397,7 +680,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
                 const country = node?.displayGroup || "Unknown";
 
                 path.setAttribute("d", this._annularSectorPath(cx, cy, innerRadius, outer, startAngle, endAngle));
-                path.setAttribute("fill", countryColour(country));
+                path.setAttribute("fill", this._countryFill(country));
                 path.setAttribute("stroke", "#171717");
                 path.setAttribute("stroke-width", generation >= 7 ? "0.8" : "1.1");
                 path.setAttribute("vector-effect", "non-scaling-stroke");
@@ -421,7 +704,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         rootCircle.setAttribute("cx", String(cx));
         rootCircle.setAttribute("cy", String(cy));
         rootCircle.setAttribute("r", String(rootRadius));
-        rootCircle.setAttribute("fill", countryColour(rootCountry));
+        rootCircle.setAttribute("fill", this._countryFill(rootCountry));
         rootCircle.setAttribute("stroke", "#171717");
         rootCircle.setAttribute("stroke-width", "1.3");
         rootCircle.dataset.slot = "1";
@@ -462,7 +745,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
                     `rotate(${rotation.toFixed(2)} ${point.x.toFixed(2)} ${point.y.toFixed(2)})`
                 );
                 text.setAttribute("font-size", String(fontSize));
-                text.setAttribute("fill", this._textColour(country));
+                this._styleLabel(text, country);
                 text.setAttribute("text-anchor", "middle");
                 text.setAttribute("dominant-baseline", "middle");
                 text.dataset.slot = String(slot);
@@ -480,7 +763,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             rootText.setAttribute("x", String(cx));
             rootText.setAttribute("y", String(cy));
             rootText.setAttribute("font-size", "15");
-            rootText.setAttribute("fill", this._textColour(rootCountry));
+            this._styleLabel(rootText, rootCountry);
             rootText.setAttribute("text-anchor", "middle");
             rootText.setAttribute("dominant-baseline", "middle");
             rootText.dataset.slot = "1";
@@ -501,7 +784,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         this.container.querySelectorAll(".bcfc-wedge").forEach((element) => {
             const node = this.slots.get(Number(element.dataset.slot));
             const show = (event) => {
-                if (this.isPresenting) return;
+                if (this.isPresenting || this.isDragging || this.pointers.size || event.pointerType === "touch") return;
                 tooltip.innerHTML = this._tooltipHtml(node);
                 tooltip.style.display = "block";
                 tooltip.setAttribute("aria-hidden", "false");
@@ -522,7 +805,9 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             });
             on(element, "pointerleave", () => this._hideTooltip());
             on(element, "blur", () => this._hideTooltip());
-            on(element, "click", () => this._openProfile(node));
+            on(element, "click", () => {
+                if (performance.now() >= this.suppressClicksUntil) this._openProfile(node);
+            });
             on(element, "keydown", (event) => {
                 if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
@@ -608,7 +893,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         this.app?.classList.toggle("bcfc-many-countries", legendCountries.length > 9);
         const escape = (value) => this._escapeHtml(value);
         const swatch = (country, className) =>
-            `<span class="${className}" style="background:${countryColour(country)}"></span>`;
+            `<span class="${className}" style="${swatchStyle(this._countryStyle(country))}"></span>`;
         this.container.querySelector(".bcfc-legend-items").innerHTML = legendCountries
             .map(
                 (country) => `
@@ -621,7 +906,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         this.container.querySelector(".bcfc-mix-bar").innerHTML = this.countries
             .map(
                 (country) =>
-                    `<span class="bcfc-mix-seg" data-bar-country="${escape(country)}" style="background:${countryColour(country)}"></span>`
+                    `<span class="bcfc-mix-seg" data-bar-country="${escape(country)}" style="${swatchStyle(this._countryStyle(country))}"></span>`
             )
             .join("");
         this.container.querySelector(".bcfc-mix-rows").innerHTML = this.countries
@@ -688,12 +973,20 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         const button = this.container.querySelector("#bcfc-present");
         button.setAttribute("aria-pressed", String(isPresenting));
         button.querySelector("span").textContent = isPresenting ? "Exit screenshot view" : "Screenshot view";
+        this.container.querySelector("#bcfc-exit-present").hidden = !isPresenting;
+        if (isPresenting) {
+            this.savedViewState = { ...this.viewState };
+            this.viewState = { ...FIT_VIEW };
+        } else {
+            this.viewState = this.savedViewState || { ...FIT_VIEW };
+        }
+        this._applyView();
         this._hideTooltip();
         this.container.querySelectorAll("details[open]").forEach((details) => {
             details.open = false;
         });
         this._updateMixPanel(this.overallMix, "Whole tree");
-        if (!isPresenting) button.focus();
+        if (!isPresenting) this.container.querySelector("#bcfc-export-menu > summary").focus();
     }
 
     _applyCountryVisibility() {
@@ -730,6 +1023,9 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         }
         if (generationSelect) generationSelect.disabled = isLoading;
         if (presentButton) presentButton.disabled = isLoading || isError;
+        this.container.querySelectorAll("[data-export]").forEach((button) => {
+            button.disabled = isLoading || isError || !this.model || this.isExporting;
+        });
     }
 
     _annularSectorPath(cx, cy, innerRadius, outerRadius, startAngle, endAngle) {
@@ -765,7 +1061,18 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
     }
 
     _textColour(country) {
-        return countryTextColour(country);
+        return countryTextColour(country, this.settings.group, this.settings.patterns);
+    }
+
+    _styleLabel(text, country) {
+        const fill = this._textColour(country);
+        text.setAttribute("fill", fill);
+        if (this.settings.patterns && this.settings.group !== "country") {
+            text.setAttribute("paint-order", "stroke fill");
+            text.setAttribute("stroke", fill === "#ffffff" ? "#000000" : "#ffffff");
+            text.setAttribute("stroke-width", "1.8");
+            text.setAttribute("stroke-opacity", "0.85");
+        }
     }
 
     _emptyMix() {

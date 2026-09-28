@@ -69,10 +69,24 @@ An Apps Server account/test directory and a permitted private profile are needed
   tooltips retain the full API-derived name. No labels are generated in off mode.
 - **Fill unknowns from child:** recursively fills genuinely missing birth locations and absent ancestor slots
   from the nearest known descendant on that slot's path to the root. Does not overwrite unrecognised recorded text.
-- The chart automatically fits the available space.
-- **Screenshot view:** hides the Tree Apps navigation, chart controls and help buttons, fits the chart,
-  and resets the share panel to the whole tree. Press Escape to return, or hover/focus the screenshot
-  button to exit. This mode is temporary and is not saved in the URL.
+- **Zoom and pan:** the chart starts fitted. Use the wheel or pinch to zoom, then drag to pan.
+  The small chart controls provide zoom and reset. With the chart focused, +/− zoom, arrow keys pan
+  and 0 resets. Zoom is bounded to 1–6× and is temporary; dragging does not open profile links.
+- **Export:** download a standalone SVG or PNG containing the profile heading, life years, current
+  settings, full chart, legend and whole-tree shares. Export preserves dimmed categories and patterns;
+  it includes the full chart at any zoom. PNG normally uses 2× resolution, bounded to 20 million pixels
+  and 8192px height for very long legends. Export runs locally in the browser without extra API calls.
+- **Screenshot view** is in Export. It hides navigation, controls, help and optional tools, fits the chart
+  and resets the share panel to the whole tree. Escape or the exit button returns to the previous zoom.
+- **Tools → Compare parents:** a table compares each country's/region's paternal and maternal share.
+  Each side totals 100% and uses the same terminal slots, inference and repeated-ancestor weights as
+  the chart. The table stays fixed while hovering a branch.
+- **Tools → Review birthplaces:** lists recorded locations with an unresolved country, unspecified UK
+  country or unassigned geographic group. Repeated profiles appear once with their slot count.
+  Links use actual returned WikiTree IDs; no placeholder profile links are created.
+- **Tools → Patterned groups:** regions and continents can use the [Okabe–Ito palette](https://jfly.uni-koeln.de/color/)
+  plus patterns in wedges, legends, comparison swatches and exports. This option is disabled in Country
+  mode. Regional colours otherwise use a fixed palette with wider separation.
 - A profile heading includes name, life years and a compact settings summary. Colour-key explanations,
   geographic classification and share methodology are available through the small **i** toggles.
   Successful load counts stay
@@ -91,7 +105,7 @@ An Apps Server account/test directory and a permitted private profile are needed
   The standard WikiTree navigation and page styles are preserved.
 
 Accepted shareable hash parameters: `generations=4..8`, `infer=0|1`, `names=full|surname|off`,
-`group=country|continent|region`.
+`group=country|continent|region`, `patterns=0|1`.
 Settings persist in app-specific local storage. URL parameters override saved settings.
 
 ## Geographic grouping
