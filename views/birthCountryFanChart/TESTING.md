@@ -292,3 +292,19 @@ Patterned colours credit [Masataka Okabe and Kei Ito](https://jfly.uni-koeln.de/
 [W3C's guidance to supplement colour with other cues](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color).
 The region palette's RGB separation and the simulated checks are engineering checks, not a substitute
 for user testing. Country mode retains the original country palette.
+
+## Automatic loading depth
+
+The default is now five ancestor generations: at most 63 profiles including the root. Saved settings
+and shared links retain their selected depth, but depths 6–8 wait for **Load generations** before any
+ancestor request. Changing the generations dropdown is also an explicit load action. The shared
+registry's initial single-profile lookup is unchanged.
+
+**112 Node tests pass.** The additional cases verify the actual view's default and setting precedence,
+automatic requests only at depths 4–5, no ancestor requests at 6–8 before interaction, and the selected
+larger depth loading after an explicit action. Existing chart, location, export and weighting tests pass.
+
+Browser checks on `Stuart-1`: an eight-generation link shows a load prompt with zero wedges and hidden
+legend; clicking Load renders all 510 ancestor wedges. Selecting six generations loads 126 wedges,
+and reloading the page restores the load prompt. Testing used port 8766 because another project now
+occupies the previous local port 8765.

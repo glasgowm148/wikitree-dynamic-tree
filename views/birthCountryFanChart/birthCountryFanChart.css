@@ -32,6 +32,40 @@
 .bcfc-app [hidden] {
   display: none !important;
 }
+.bcfc-awaiting-load #bcfc-svg,
+.bcfc-awaiting-load .bcfc-chart-navigation,
+.bcfc-awaiting-load .bcfc-country-legend,
+.bcfc-awaiting-load .bcfc-ancestry,
+.bcfc-awaiting-load .bcfc-review {
+  display: none;
+}
+.bcfc-awaiting-load .bcfc-chart-area {
+  grid-column: 1 / -1;
+}
+.bcfc-load-prompt {
+  padding: 48px 16px;
+  text-align: center;
+}
+.bcfc-load-prompt h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.bcfc-load-prompt p {
+  margin: 12px 0 24px;
+  color: #68768a;
+}
+.bcfc-load-prompt button {
+  padding: 12px 20px;
+  border: 1px solid #0065bd;
+  border-radius: 8px;
+  background: #0065bd;
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+.bcfc-load-prompt button:hover {
+  background: #004f94;
+}
 .bcfc-app *,
 .bcfc-app *::before,
 .bcfc-app *::after {

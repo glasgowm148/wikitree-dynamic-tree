@@ -16,6 +16,8 @@ import { createChartExport, exportPng, downloadBlob } from "./chartExport.js";
 window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
     static APP_ID = "BirthCountryFanChart";
     static STORAGE_KEY = "wt_birth_country_fan_chart_settings";
+    static DEFAULT_GENERATIONS = 5;
+    static AUTO_LOAD_GENERATIONS = 5;
 
     meta() {
         return {
@@ -91,7 +93,9 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         const savedGenerations = Number(stored.generations);
         const generations = Math.round(
             this._clamp(
-                Number.isFinite(paramGenerations) && paramGenerations ? paramGenerations : savedGenerations || 7,
+                Number.isFinite(paramGenerations) && paramGenerations
+                    ? paramGenerations
+                    : savedGenerations || BirthCountryFanChartView.DEFAULT_GENERATIONS,
                 4,
                 8
             )
@@ -216,6 +220,11 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
                         <div id="bcfc-status" class="bcfc-status" role="status" aria-live="polite"></div>
                     </section>
                     <div class="bcfc-chart-area">
+                        <section id="bcfc-load-prompt" class="bcfc-load-prompt" aria-label="Load chart" hidden>
+                            <h2>Your larger family chart is ready to load</h2>
+                            <p id="bcfc-load-description"></p>
+                            <button id="bcfc-load-chart" type="button" aria-describedby="bcfc-load-description">Load chart</button>
+                        </section>
                         <svg id="bcfc-svg" viewBox="0 0 1600 870" role="group" tabindex="0" aria-describedby="bcfc-navigation-help" aria-label="Ancestor fan chart coloured by birth country">
                             <defs id="bcfc-patterns"></defs>
                             <g id="bcfc-viewport"><g id="bcfc-chart"></g></g>
@@ -275,6 +284,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         const generations = find("#bcfc-generations");
         const infer = find("#bcfc-infer");
         const names = find("#bcfc-names");
+        on(find("#bcfc-load-chart"), "click", () => this._loadData(true));
         on(find("#bcfc-present"), "click", () => this._setPresentation(!this.isPresenting));
         on(find("#bcfc-exit-present"), "click", () => this._setPresentation(false));
         on(find("#bcfc-compare"), "change", (event) => {
@@ -304,9 +314,13 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             this._renderChart();
         });
         on(generations, "change", () => {
-            this.settings.generations = this._clamp(Number(generations.value) || 7, 4, 8);
+            this.settings.generations = this._clamp(
+                Number(generations.value) || BirthCountryFanChartView.DEFAULT_GENERATIONS,
+                4,
+                8
+            );
             this._saveSettings();
-            this._loadData();
+            this._loadData(true);
         });
         on(infer, "change", () => {
             this.settings.infer = infer.checked;
@@ -571,7 +585,24 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         }
     }
 
-    async _loadData() {
+    _setLoadPrompt(isPending) {
+        this.app.classList.toggle("bcfc-awaiting-load", isPending);
+        this.container.querySelector("#bcfc-load-prompt").hidden = !isPending;
+        if (isPending) {
+            const depth = this.settings.generations;
+            this.container.querySelector("#bcfc-load-description").textContent =
+                `${depth} ancestor generations · Up to ${2 ** (depth + 1) - 1} profiles including you.`;
+            this.container.querySelector("#bcfc-load-chart").textContent = `Load ${depth} generations`;
+        }
+    }
+
+    async _loadData(userInitiated = false) {
+        if (!userInitiated && this.settings.generations > BirthCountryFanChartView.AUTO_LOAD_GENERATIONS) {
+            this._setLoadPrompt(true);
+            this._setLoading(false, "");
+            return;
+        }
+        this._setLoadPrompt(false);
         const serial = ++this.requestSerial;
         this.isExporting = false;
         this._hideTooltip();
@@ -1022,7 +1053,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             status.classList.toggle("bcfc-is-idle", !isLoading && !isError);
         }
         if (generationSelect) generationSelect.disabled = isLoading;
-        if (presentButton) presentButton.disabled = isLoading || isError;
+        if (presentButton) presentButton.disabled = isLoading || isError || !this.model;
         this.container.querySelectorAll("[data-export]").forEach((button) => {
             button.disabled = isLoading || isError || !this.model || this.isExporting;
         });

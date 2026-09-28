@@ -63,8 +63,10 @@ An Apps Server account/test directory and a permitted private profile are needed
 
 - **Group by:** Country (default), Continent, or Region. Changes chart colours, legend and whole-tree/branch
   shares without reloading the API. Tooltips retain the recorded location and resolved country.
-- **Ancestor generations:** 4–8 (parents are generation 1; root is shown separately); default 7.
-  At depth 8 there are at most 511 slots including the root, below the API's 1000-related-profile page limit.
+- **Ancestor generations:** 4–8 (parents are generation 1; root is shown separately); default 5.
+  Depth 5 loads at most 63 profiles including the root. Saved settings or links specifying 6–8 show a
+  **Load generations** button before requesting ancestors. Selecting a depth in the dropdown also loads
+  that depth as an explicit user action. At depth 8 there are at most 511 slots including the root.
 - **Names:** full names, surname at birth (current surname fallback), or off. Long chart labels are truncated;
   tooltips retain the full API-derived name. No labels are generated in off mode.
 - **Fill unknowns from child:** recursively fills genuinely missing birth locations and absent ancestor slots
