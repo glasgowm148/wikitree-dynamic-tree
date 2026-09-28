@@ -64,7 +64,3 @@ If you wouuld like to contribute see [documentation](docs/contributing.md) and t
 ## Example
 
 A hosted version is at: http://apps.wikitree.com/apps/wikitree-dynamic-tree/
-
-## Birth Country Fan Chart development
-
-This checkout includes the integrated **Birth Country Fan Chart** view. See its [launch instructions, percentage model and testing notes](views/birthCountryFanChart/README.md).
