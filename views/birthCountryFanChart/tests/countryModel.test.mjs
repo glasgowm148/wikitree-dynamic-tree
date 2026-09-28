@@ -11,6 +11,8 @@ import {
     API_FIELDS,
 } from "../countryModel.js";
 import { fixture } from "./fixture.mjs";
+import { GEOGRAPHIC_REGIONS } from "../geographyData.js";
+import { groupBirthCountry } from "../geography.js";
 
 const locations = [
     ["Glasgow, Lanarkshire, Scotland, United Kingdom", "Scotland"],
@@ -75,6 +77,73 @@ for (const [location, country] of locations) {
     test(`normalise ${location || "(empty)"} → ${country}`, () =>
         assert.equal(normaliseCountry(location).country, country));
 }
+
+test("every geographic country/territory label can be parsed and grouped from a birthplace", () => {
+    for (const [region, { continent, countries }] of Object.entries(GEOGRAPHIC_REGIONS)) {
+        for (const label of countries.split("|")) {
+            for (const location of [label, `Example town, ${label}`]) {
+                const { country } = normaliseCountry(location);
+                assert.ok(!["Other", "Unknown"].includes(country), location);
+                // Bare Georgia is the country; a town with Georgia alone is ambiguous.
+                if (label === "Georgia" && location !== label) continue;
+                const grouped = country === "UK" ? "United Kingdom" : country;
+                assert.equal(groupBirthCountry(grouped, "continent"), continent, location);
+                assert.equal(groupBirthCountry(grouped, "region"), region, location);
+            }
+        }
+    }
+});
+
+test("public-profile sampling regressions retain recorded text and historical labels", () => {
+    const sample = [
+        ["Fernie BC Canada", "Canada"],
+        ["Hatley, Quebec Canada", "Canada"],
+        ["Drahenice 16 Czech Republic", "Czechia"],
+        ["Forrest City, NC", "United States"],
+        ["Newark, Essex county NJ", "United States"],
+        ["Basse-Terre, Guadeloupe", "Guadeloupe"],
+        ["Wellington, Cape Colony (South Africa)", "Cape Colony"],
+        ["Santa Clara, Ocotlán, Nueva España (Jalisco, México)", "Mexico"],
+        ["Lhota, Hradiště Uherské, Morava, Rakousko", "Austria"],
+        ["New York Colony", "Province of New York"],
+        ["Deutscher Bund", "German Confederation"],
+        ["Charlesbourg, Nouvelle France", "New France"],
+        ["Repentigny, Province de Québec", "Province of Quebec"],
+        ["Waterberg, ZAR", "South African Republic"],
+        ["Niederschopfheim, Amt Offenburg, Großherzogtum Baden", "Baden"],
+        ["Corleone, Palermo, Sicily", "Italy"],
+        ["Kincardine, Bruce, Canada West", "Canada"],
+        ["Indiana Territory", "United States"],
+        ["Grafton, Worcester, Massachusetts Bay", "United States"],
+        ["Berlin, Prussia (Germany)", "Prussia"],
+        ["New Jersey USA", "United States"],
+        ["Pocahontas,Randolph,Arkansas USA", "United States"],
+        ["Floyd, Va.", "United States"],
+        ["Graaf-Reinet, Cape Colony", "Cape Colony"],
+    ];
+    for (const [location, expected] of sample) {
+        const result = normaliseCountry(location);
+        assert.equal(result.country, expected, location);
+        assert.equal(result.birthLocation, location);
+        assert.equal(result.missing, false);
+    }
+});
+
+test("short region codes require context and never override explicit countries", () => {
+    for (const code of ["IN", "OR", "ON", "CA", "NC"]) {
+        assert.equal(normaliseCountry(code).country, "Unknown", code);
+    }
+    assert.equal(normaliseCountry("Paris, IN").country, "United States");
+    assert.equal(normaliseCountry("London, ON").country, "Canada");
+    assert.equal(normaliseCountry("Paris, in").country, "Other");
+    assert.equal(normaliseCountry("London, ON, England").country, "England");
+    assert.equal(normaliseCountry("London, ON, UK").country, "England");
+    assert.equal(normaliseCountry("Example, IN, France").country, "France");
+    assert.equal(normaliseCountry("Mexico City").country, "Unknown");
+    assert.equal(normaliseCountry("Canadian hamlet").country, "Unknown");
+    assert.equal(normaliseCountry("Example, or").country, "Other");
+    assert.equal(normaliseCountry("Example, on").country, "Other");
+});
 
 test("unrecognised recorded text is not genuinely missing", () => {
     assert.equal(normaliseCountry("Unrecognised hamlet").missing, false);

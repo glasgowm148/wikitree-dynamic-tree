@@ -1,9 +1,11 @@
 import { Utils } from "../shared/Utils.js";
 import { groupBirthCountry } from "./geography.js";
+import { GEOGRAPHIC_REGIONS } from "./geographyData.js";
 import {
     countries as countryCatalogue,
     historicalCountries,
     canadaProvincesDetails,
+    usStatesDetails,
 } from "../oneNameTrees/location_data.js";
 
 export const COUNTRIES = Object.freeze(["Scotland", "Ireland", "England", "Other", "Unknown"]);
@@ -46,6 +48,13 @@ for (const country of countryCatalogue) {
         if (alias) countryAliases.set(clean(alias), name);
     }
 }
+// The upstream catalogue omits some modern countries and many territories. Reuse our
+// UN geographic labels as well, without replacing existing native-name aliases.
+for (const { countries } of Object.values(GEOGRAPHIC_REGIONS)) {
+    for (const country of countries.split("|")) {
+        if (!countryAliases.has(clean(country))) countryAliases.set(clean(country), country);
+    }
+}
 for (const country of historicalCountries) {
     // Some upstream entries contain explanatory prose; those are not usable location labels.
     if (!country.includes(",") && !countryAliases.has(clean(country))) countryAliases.set(clean(country), country);
@@ -57,8 +66,7 @@ const aliases = {
     "Wales": ["Cymru", "Principality of Wales"],
     "France": ["Kingdom of France", "French Republic"],
     "Germany": ["Deutschland", "Modern Germany"],
-    "Austria": ["Osterreich", "Erzherzogtum Osterreich"],
-    "Netherlands": ["The Netherlands", "Holland", "Nederland", "Nederlanden"],
+    "Austria": ["Osterreich", "Erzherzogtum Osterreich", "Rakousko"],
     "Denmark": ["Danmark"],
     "Switzerland": ["Suisse", "Schweiz", "Svizzera"],
     "Italy": ["Italia"],
@@ -78,6 +86,35 @@ const aliases = {
     "Isle of Man": ["Isle of Man"],
     "Jersey": ["Jersey"],
     "Guernsey": ["Guernsey"],
+    "Tanzania": ["United Republic of Tanzania"],
+    "Congo (Brazzaville)": ["Republic of the Congo", "Congo"],
+    "Congo (Kinshasa)": ["Democratic Republic of the Congo"],
+    "Côte d’Ivoire": ["Ivory Coast", "Côte d'Ivoire"],
+    "North Korea": ["Democratic People's Republic of Korea"],
+    "South Korea": ["Republic of Korea"],
+    "Brunei": ["Brunei Darussalam"],
+    "Laos": ["Lao People's Democratic Republic"],
+    "Iran": ["Iran (Islamic Republic of)"],
+    "Palestine": ["State of Palestine"],
+    "Syria": ["Syrian Arab Republic"],
+    "Moldova": ["Republic of Moldova"],
+    "Russia": ["Russian Federation"],
+    "Netherlands": ["The Netherlands", "Holland", "Nederland", "Nederlanden", "Netherlands (Kingdom of the)"],
+    "Vatican City": ["Holy See"],
+    "Micronesia": ["Micronesia (Federated States of)"],
+    "Nauru": ["Naoero"],
+    "Bolivia": ["Bolivia (Plurinational State of)"],
+    "Venezuela": ["Venezuela (Bolivarian Republic of)"],
+    "China, Hong Kong Special Administrative Region": ["Hong Kong", "Hongkong"],
+    "China, Macao Special Administrative Region": ["Macao", "Macau"],
+    "Falkland Islands (Malvinas)": ["Falkland Islands"],
+    "German Confederation": ["Deutscher Bund"],
+    "New France": ["Nouvelle France", "Nouvelle-France"],
+    "Province of New York": ["New York Colony"],
+    "Province of Quebec": ["Province de Québec"],
+    "South African Republic": ["ZAR", "Zuid-Afrikaansche Republiek"],
+    "Baden": ["Großherzogtum Baden", "Grand Duchy of Baden"],
+    "Cape Colony": ["Kaapkolonie"],
 };
 for (const [country, names] of Object.entries(aliases)) {
     for (const alias of [country, ...names]) countryAliases.set(clean(alias), country);
@@ -85,6 +122,11 @@ for (const [country, names] of Object.entries(aliases)) {
 const overseasRegions = new Map();
 for (const province of canadaProvincesDetails) overseasRegions.set(clean(province.name), "Canada");
 overseasRegions.set("newfoundland", "Canada");
+overseasRegions.set("canada west", "Canada");
+overseasRegions.set("canada east", "Canada");
+overseasRegions.set("indiana territory", "United States");
+overseasRegions.set("massachusetts bay", "United States");
+overseasRegions.set("sicily", "Italy");
 for (const region of "new south wales|victoria|queensland|tasmania|western australia|south australia|northern territory|australian capital territory".split(
     "|"
 )) {
@@ -97,6 +139,15 @@ const additionalRegions = {
 for (const [country, names] of Object.entries(additionalRegions)) {
     regionSets[country] = new Set(names.split("|"));
 }
+const abbreviatedRegions = new Map([
+    ...usStatesDetails.map(({ abbreviation }) => [abbreviation, "United States"]),
+    ...canadaProvincesDetails.map(({ abbreviation }) => [abbreviation, "Canada"]),
+]);
+// Longest first: e.g. Nouvelle France must match before France. Short codes such as
+// IN/ON/CA need separate context and must not be treated as arbitrary word suffixes.
+const countrySuffixes = [...countryAliases.keys()]
+    .filter((alias) => alias.length > 3 || alias === "usa")
+    .sort((a, b) => b.length - a.length);
 
 export function sortCountries(names) {
     const first = ["Scotland", "Ireland", "England", "Wales"];
@@ -126,12 +177,17 @@ export function normaliseCountry(location) {
         return { country: "United States", birthLocation, missing: false, reason: "Recorded overseas state" };
     }
     let hasUK = false;
-    for (const part of [...parts].reverse()) {
+    for (let i = parts.length - 1; i >= 0; i--) {
+        const part = parts[i];
         if (uk.test(part)) {
             hasUK = true;
             continue;
         }
-        let country = countryAliases.get(part);
+        // Some complete UN names themselves contain a comma.
+        let country =
+            countryAliases.get(parts.slice(i).join(", ")) ||
+            countryAliases.get(part) ||
+            countryAliases.get(part.replace(/\s*\([^)]*\)/g, "").trim());
         if (country) {
             // Historical catalogue names can also be Irish counties (e.g. Fermanagh).
             for (const home of [...HOME_COUNTRIES, "Wales"]) {
@@ -145,6 +201,41 @@ export function normaliseCountry(location) {
     const overseasCountry = overseasRegions.get(suffix);
     if (overseasCountry && !hasUK) {
         return { country: overseasCountry, birthLocation, missing: false, reason: "Recognised overseas region" };
+    }
+    // Parenthetical modern locations are useful when the main label is unresolved;
+    // a recognised historical country above retains priority over that annotation.
+    for (const match of clean(birthLocation).matchAll(/\(([^()]*)\)/g)) {
+        for (const part of match[1].split(/[,;]/).reverse()) {
+            const country = countryAliases.get(part.trim());
+            if (country && country !== "United Kingdom") {
+                return { country, birthLocation, missing: false, reason: "Recorded country in annotation" };
+            }
+        }
+    }
+    for (const alias of countrySuffixes) {
+        if (suffix?.endsWith(` ${alias}`)) {
+            let country = countryAliases.get(alias);
+            for (const home of [...HOME_COUNTRIES, "Wales"]) {
+                if (regionSets[home].has(alias)) country = home;
+            }
+            if (country !== "United Kingdom") {
+                return { country, birthLocation, missing: false, reason: "Recorded country suffix" };
+            }
+        }
+    }
+    // Accept uppercase state/province codes only in a multi-component location.
+    // Explicit countries and UK markers above take priority over these ambiguous codes.
+    const finalComponent = birthLocation.split(/[,;]/).at(-1).trim();
+    const abbreviation = (
+        finalComponent.match(/\b([A-Z]{2})$/)?.[1] || finalComponent.match(/\b([A-Z][a-z])\.$/)?.[1]
+    )?.toUpperCase();
+    if (parts.length > 1 && !hasUK && abbreviatedRegions.has(abbreviation)) {
+        return {
+            country: abbreviatedRegions.get(abbreviation),
+            birthLocation,
+            missing: false,
+            reason: "Recorded state or province abbreviation",
+        };
     }
     for (const candidate of [...parts].reverse().concat(sharedCountry)) {
         const region = candidate

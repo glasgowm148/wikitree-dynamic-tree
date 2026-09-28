@@ -120,7 +120,8 @@ does not affect shares. Switching back to Country restores the individual countr
 
 `countryModel.js` reuses `Utils.settingsStyleLocation(location, "Country")` as a parsing hint and applies
 case/accent/punctuation normalisation, home-country names, historic county names and common cities.
-The normaliser also reuses the existing `views/oneNameTrees/location_data.js` country catalogue, native names, aliases and historical-country names. Recognised countries retain their own categories. Foreign country/region suffixes take precedence over ambiguous British place names, e.g. London, Ontario,
+The normaliser also reuses the existing `views/oneNameTrees/location_data.js` country catalogue, native names, aliases and historical-country names, supplemented by all 277 country/area labels in `geographyData.js`.
+It recognises selected historical/native variants, country suffixes without commas, parenthetical country annotations and contextual US/Canadian state/province abbreviations. A recognised historical label takes priority over its modern annotation. Recognised countries and territories retain their own categories. Foreign country/region suffixes take precedence over ambiguous British place names, e.g. London, Ontario,
 Canada resolves to Canada. Wales and Welsh counties resolve to Wales. Historical labels such as Prussia and the Holy Roman Empire stay separate; Unknown single place names remain
 Unknown; the normaliser is deliberately a finite rule set, not a worldwide geocoder.
 

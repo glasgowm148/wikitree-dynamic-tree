@@ -37,6 +37,14 @@ const mappings = [
     ["Fiji", "Oceania", "Melanesia"],
     ["Samoa", "Oceania", "Polynesia"],
     ["Antarctica", "Antarctica", "Antarctica"],
+    ["New France", "North America", "Northern America"],
+    ["Province of New York", "North America", "Northern America"],
+    ["Province of Quebec", "North America", "Northern America"],
+    ["South African Republic", "Africa", "Southern Africa"],
+    ["Cape Colony", "Africa", "Southern Africa"],
+    ["Connecticut Colony", "North America", "Northern America"],
+    ["Province of North Carolina", "North America", "Northern America"],
+    ["Rhodesia", "Africa", "Southern Africa"],
 ];
 test("continent and region mappings use geographic rather than sovereign affiliation", () => {
     for (const [country, continent, region] of mappings) {

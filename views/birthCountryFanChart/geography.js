@@ -25,6 +25,14 @@ for (const country of "Holy Roman Empire|Prussia|Duchy of Prussia|Brandenburg-Pr
 )) {
     geography.set(country, { continent: "Europe", region: "Europe (region unspecified)" });
 }
+for (const country of "New France|Province of New York|Province of Quebec|Province of Massachusetts Bay|Colony of Virginia|Bas-Canada|Lower Canada|Upper Canada|Connecticut Colony|Province of North Carolina|Province of South Carolina|Province of Georgia|Province of Maryland|Province of New Jersey|Province of New Hampshire|Province of Pennsylvania|Colony of Pennsylvania|Delaware Colony|Colony of Rhode Island and Providence Plantations|Province of Carolina".split(
+    "|"
+)) {
+    geography.set(country, { continent: "North America", region: "Northern America" });
+}
+for (const country of ["South African Republic", "Orange Free State", "Cape Colony", "Rhodesia"]) {
+    geography.set(country, { continent: "Africa", region: "Southern Africa" });
+}
 
 export function groupBirthCountry(country, grouping = "country") {
     if (grouping === "country" || !GROUPINGS[grouping] || country === "Other" || country === "Unknown") return country;

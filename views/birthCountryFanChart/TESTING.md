@@ -188,3 +188,57 @@ Created the `glasgowm148/wikitree-dynamic-tree` GitHub fork of `wikitree/wikitre
 The local checkout uses `origin` for the fork and `upstream` for the WikiTree repository.
 The feature branch is `birth-country-fan-chart`. Hosted Apps Server and authenticated private-profile
 verification remain pending while the account request is awaiting a response.
+
+## Public birthplace audit — 2026-09-28
+
+Requested two batches of 500 randomly selected numeric profile IDs in the range 1–40,000,000 using
+anonymous `getPeople` with only `Id,Name,BirthLocation`. The first batch used Python `random.sample`
+with seed 933; the second used the audit script's xorshift32 generator with seed 934.
+The responses contained 846 distinct, named, accessible profiles; 671 returned nonblank birthplaces.
+The remaining 175 named profiles returned no birthplace. Missing IDs and nameless placeholders are
+excluded from birthplace coverage.
+
+| Sample                   | Recorded birthplaces | Resolved before | Resolved after |
+| ------------------------ | -------------------: | --------------: | -------------: |
+| First 500 requested IDs  |                  338 |             312 |            334 |
+| Second 500 requested IDs |                  333 |             321 |            331 |
+| Total                    |                  671 |     633 (94.3%) |    665 (99.1%) |
+
+Fixed country/territory omissions (including Guadeloupe and South Korea), official-name variants,
+missing commas, parenthetical countries, contextual state/province abbreviations and selected
+historical/native labels. Added geographic mappings for the recognised colonial labels found in the
+samples. Country/region coverage is tested for every one of the 277 geographic labels, both bare
+and after a town component. Bare Georgia remains the country; a town followed by Georgia alone
+retains the existing US-state interpretation.
+
+Six recorded locations remain unresolved: `Nowy Sacz, Galizien`; `Holthusen, Gerdau, Uelzen, Hannover`;
+`Oranje Unie`; `Diedendorf, County of Nassau-Saarbrücken`; `Alabama or Tennessee`; and a corrupted
+`Kromìøí… Bìlidla 13` value. These need more context or dedicated parsing rules. Resolution means the
+parser produced a category; it is **not verified accuracy**. Fixed ID bounds, unavailable profiles and
+the platform's geographic mix make this unsuitable as an estimate of worldwide coverage. Both
+samples informed fixes, so neither is an independent final validation set.
+
+**99 offline Node tests pass.** The new regressions cover observed formatting failures, all geographic
+labels, preservation of recorded text, historical-label priority, and ambiguous short-code safeguards.
+
+Repeat the live audit (manual; one API request, no ancestor expansion):
+
+```sh
+node views/birthCountryFanChart/tests/auditLocations.mjs --fetch output/location-audit/sample.json 934
+```
+
+Recheck a saved snapshot without another API call:
+
+```sh
+node views/birthCountryFanChart/tests/auditLocations.mjs output/location-audit/sample.json
+```
+
+Snapshots and `.audit.json` summaries are local outputs, excluded through `.git/info/exclude` in this
+workspace. Do not include them in the hosted runtime. A new live audit may change as profiles change.
+
+WikiTree's location fields are free text, as explained by [Jamie Nelson](https://www.wikitree.com/g2g/1946452/matches-when-adding-profiles-largely-unhelpful).
+There is no closed vocabulary established by that API field. [WikiTree Plus](https://www.wikitree.com/wiki/Help:WikiTree_Plus)
+provides observed location-frequency and country reports. [GeoNames](https://www.geonames.org/export/)
+offers a worldwide gazetteer, but still needs disambiguation and historical interpretation. The
+current finite parser uses the existing Tree Apps catalogue and our [UN M49](https://unstats.un.org/unsd/methodology/m49/)
+snapshot without introducing an external geocoding service.
