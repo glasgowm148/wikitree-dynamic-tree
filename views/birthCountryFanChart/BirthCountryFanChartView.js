@@ -17,7 +17,7 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
 
     meta() {
         return {
-            title: "Birth Country Fan Chart",
+            title: "Fan Chart: Birth Country",
             description:
                 "Visualises ancestral birth countries and genealogical slot-weighted ancestral birth-country share, with optional inference for missing locations.",
             docs: "views/birthCountryFanChart/README.md",
@@ -176,10 +176,6 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
                                     <option value="off">Names off</option>
                                 </select>
                             </label>
-                            <label class="bcfc-select-row" for="bcfc-zoom">
-                                <span>Chart size</span>
-                                <select id="bcfc-zoom"><option value="fit">Fit</option><option value="1600">Large</option><option value="2400">Extra large</option></select>
-                            </label>
                             <label class="bcfc-switch-row" for="bcfc-infer" title="Fill missing birthplaces from the nearest known child. Dashed outlines mark inferred values.">
                                 <input id="bcfc-infer" type="checkbox" aria-describedby="bcfc-infer-help">
                                 <span class="bcfc-switch" aria-hidden="true"></span>
@@ -262,10 +258,6 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
             this.settings.names = names.value;
             this._saveSettings();
             this._renderChart();
-        });
-        on(find("#bcfc-zoom"), "change", (event) => {
-            find("#bcfc-svg").style.width = event.target.value === "fit" ? "100%" : `${event.target.value}px`;
-            find("#bcfc-svg").classList.toggle("bcfc-zoomed", event.target.value !== "fit");
         });
         on(find(".bcfc-legend-items"), "click", (event) => {
             const button = event.target.closest("[data-country-toggle]");
@@ -696,10 +688,6 @@ window.BirthCountryFanChartView = class BirthCountryFanChartView extends View {
         const button = this.container.querySelector("#bcfc-present");
         button.setAttribute("aria-pressed", String(isPresenting));
         button.querySelector("span").textContent = isPresenting ? "Exit screenshot view" : "Screenshot view";
-        const size = this.container.querySelector("#bcfc-zoom").value;
-        const svg = this.container.querySelector("#bcfc-svg");
-        svg.style.width = isPresenting || size === "fit" ? "100%" : `${size}px`;
-        svg.classList.toggle("bcfc-zoomed", !isPresenting && size !== "fit");
         this._hideTooltip();
         this.container.querySelectorAll("details[open]").forEach((details) => {
             details.open = false;

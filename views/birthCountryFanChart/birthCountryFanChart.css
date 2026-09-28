@@ -141,7 +141,7 @@
 }
 .bcfc-options {
   display: grid;
-  grid-template-columns: 1.05fr 0.7fr 1.15fr 0.85fr auto;
+  grid-template-columns: 1.05fr 0.7fr 1.15fr auto;
   align-items: center;
   gap: 14px;
 }
@@ -456,7 +456,7 @@
   margin: 0;
   padding: 4px 2px;
 }
-.bcfc-many-countries #bcfc-svg:not(.bcfc-zoomed) {
+.bcfc-many-countries #bcfc-svg {
   max-height: 55vh;
 }
 .bcfc-app button:focus-visible,

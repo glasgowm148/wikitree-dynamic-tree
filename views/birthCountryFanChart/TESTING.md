@@ -242,3 +242,15 @@ provides observed location-frequency and country reports. [GeoNames](https://www
 offers a worldwide gazetteer, but still needs disambiguation and historical interpretation. The
 current finite parser uses the existing Tree Apps catalogue and our [UN M49](https://unstats.un.org/unsd/methodology/m49/)
 snapshot without introducing an external geocoding service.
+
+## Simplified controls and view name
+
+Removed the Chart Size selector and its fixed-width/zoom handling; the chart fits the available space.
+The options toolbar now has four controls. The registry ID is `fanChartBirthCountry` and the display
+title is **Fan Chart: Birth Country**, immediately after **Fan Chart** in the title-sorted app menu.
+Old `birthCountryFan` URL IDs and saved session selections migrate to the new ID.
+
+Verified in the real `Stuart-1` page: reloading the old link migrated its ID while preserving all chart
+parameters; the chart loaded Charles Stuart and retained eight generations, names off, inference on
+and country grouping. The size selector is absent. Screenshot view hides the controls; Escape restores
+them. The app menu contains one birthplace-chart entry immediately after the original Fan Chart.

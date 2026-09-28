@@ -61,7 +61,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
-    print(f"Tree Apps: http://127.0.0.1:{args.port}/#name=Stuart-1&view=birthCountryFan", flush=True)
+    print(f"Tree Apps: http://127.0.0.1:{args.port}/#name=Stuart-1&view=fanChartBirthCountry", flush=True)
     print("Public profiles only locally. Test Apps Login/private access on apps.wikitree.com.", flush=True)
     try:
         ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()

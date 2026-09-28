@@ -11,13 +11,19 @@
 
 var wtViewRegistry;
 window.addEventListener("DOMContentLoaded", (event) => {
+    // Preserve links shared under the birthplace view's original ID.
+    const viewParams = new URLSearchParams(window.location.hash.slice(1));
+    if (viewParams.get("view") === "birthCountryFan") {
+        viewParams.set("view", "fanChartBirthCountry");
+        history.replaceState("", "", `${window.location.pathname}${window.location.search}#${viewParams}`);
+    }
+
     const loginManager = new LoginManager(
         WikiTreeAPI,
         (events = {
             onLoggedIn: (user) => {
-                document.querySelector(
-                    "#wt-api-login"
-                ).innerHTML = `Logged into Apps: ${user.name} (<a class="apiLogout" href="#">Logout</a>)`;
+                document.querySelector("#wt-api-login").innerHTML =
+                    `Logged into Apps: ${user.name} (<a class="apiLogout" href="#">Logout</a>)`;
             },
             onUnlogged: () => {
                 document.querySelector("#wt-api-login").innerHTML = `
@@ -47,7 +53,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
     // Note: the keyword is used as part of the URL to get to the app.
     const views = {
         "fanchart": new FanChartView(),
-        "birthCountryFan": new BirthCountryFanChartView(),
+        "fanChartBirthCountry": new BirthCountryFanChartView(),
         "couples": new CouplesTreeView(),
         "cctree": new CCTView(),
         "ccdtree": new CCDView(),
@@ -86,7 +92,9 @@ window.addEventListener("DOMContentLoaded", (event) => {
         }
     }
 
-    wtViewRegistry = new ViewRegistry(views, new SessionManager(WikiTreeAPI, loginManager));
+    const sessionManager = new SessionManager(WikiTreeAPI, loginManager);
+    if (sessionManager.viewID === "birthCountryFan") sessionManager.viewID = "fanChartBirthCountry";
+    wtViewRegistry = new ViewRegistry(views, sessionManager);
     wtViewRegistry.render();
 });
 

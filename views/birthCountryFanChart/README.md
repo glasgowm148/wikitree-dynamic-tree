@@ -1,6 +1,7 @@
 # Birth Country Fan Chart
 
-Integrated into the WikiTree Tree Apps registry as `birthCountryFan`; API app ID `BirthCountryFanChart`.
+Listed as **Fan Chart: Birth Country** beside **Fan Chart**, with registry ID `fanChartBirthCountry`;
+API app ID `BirthCountryFanChart`. Existing `birthCountryFan` links and saved view selections migrate to the new ID.
 Plain JavaScript modules, CSS and SVG; no framework, installation or build step.
 Merged-profile redirects in API results resolve to the canonical profile ID; paged loads continue with
 that ID. Failed requests and missing redirect targets still show an error.
@@ -15,7 +16,7 @@ python3 views/birthCountryFanChart/dev_server.py
 
 Open:
 
-<http://127.0.0.1:8765/#name=Stuart-1&view=birthCountryFan&generations=7&infer=0&names=full>
+<http://127.0.0.1:8765/#name=Stuart-1&view=fanChartBirthCountry&generations=7&infer=0&names=full>
 
 Other public test IDs: `Swift-1107` (Jonathan Swift, Ireland), `Churchill-1` (John Churchill, England).
 Enter any accessible WikiTree ID in the main ID field and click **GO**.
@@ -41,7 +42,7 @@ from this branch’s `index.html` and `index.js`.
 Open `https://apps.wikitree.com/apps/YOUR-DIRECTORY/` with:
 
 ```text
-#name=Stuart-1&view=birthCountryFan&generations=7&infer=0&names=full
+#name=Stuart-1&view=fanChartBirthCountry&generations=7&infer=0&names=full
 ```
 
 Select **Birth Country Fan Chart**, enter a WikiTree ID, click **GO**. Public profiles require no login.
@@ -68,10 +69,10 @@ An Apps Server account/test directory and a permitted private profile are needed
   tooltips retain the full API-derived name. No labels are generated in off mode.
 - **Fill unknowns from child:** recursively fills genuinely missing birth locations and absent ancestor slots
   from the nearest known descendant on that slot's path to the root. Does not overwrite unrecognised recorded text.
-- **Chart size:** fit, large or extra large; large charts scroll within the chart area.
+- The chart automatically fits the available space.
 - **Screenshot view:** hides the Tree Apps navigation, chart controls and help buttons, fits the chart,
   and resets the share panel to the whole tree. Press Escape to return, or hover/focus the screenshot
-  button to exit. The previous chart size is restored. This mode is temporary and is not saved in the URL.
+  button to exit. This mode is temporary and is not saved in the URL.
 - A profile heading includes name, life years and a compact settings summary. Colour-key explanations,
   geographic classification and share methodology are available through the small **i** toggles.
   Successful load counts stay
@@ -168,7 +169,7 @@ Browser checklist:
 3. Toggle inference; check Unknown decreases only for eligible missing values, with dashed outlines.
 4. Switch all name modes; hover a wedge and a missing slot. Check tooltip location/provenance/branch shares.
 5. Click a profile (and activate via keyboard); confirm its WikiTree page opens.
-6. Toggle country dimming; confirm shares remain unchanged. Test large chart and a narrow viewport.
+6. Toggle country dimming; confirm shares remain unchanged. Check chart fit and a narrow viewport.
 7. Switch to another Tree App and back; check old tooltip, listeners and host class disappear.
 8. On Apps Server, login and repeat with a permitted private profile. Confirm redacted names have no fake links.
 
