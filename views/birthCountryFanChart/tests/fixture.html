@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Birth Country Fan Chart fixture</title>
+    <link rel="stylesheet" href="../birthCountryFanChart.css" />
+    <script src="../../../../tree.js"></script>
+    <script type="module" src="../BirthCountryFanChartView.js"></script>
+  </head>
+  <body>
+    <h1>Birth Country Fan Chart fixture</h1>
+    <p>
+      Fixture data only: Scotland, Ireland, England, UK-only, Wales, missing ancestor and repeated profile. Use the main
+      Tree Apps page for real API testing.
+    </p>
+    <div id="view-container"></div>
+    <script type="module">
+      import { fixture } from "./fixture.mjs";
+      window.WikiTreeAPI = { getPeople: async () => ["", { 1: { Id: 1 } }, fixture] };
+      window.fixtureView = new BirthCountryFanChartView();
+      fixtureView.init("#view-container", 1, { generations: "4", infer: "0", names: "full" });
+    </script>
+  </body>
+</html>

@@ -47,6 +47,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
     // Note: the keyword is used as part of the URL to get to the app.
     const views = {
         "fanchart": new FanChartView(),
+        "birthCountryFan": new BirthCountryFanChartView(),
         "couples": new CouplesTreeView(),
         "cctree": new CCTView(),
         "ccdtree": new CCDView(),
